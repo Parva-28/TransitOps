@@ -1,73 +1,204 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../lib/api';
-import { Button } from '../../components/ui/Button';
+import './login.css';
+
+const DEMO_CREDS: Record<string, {password:string;name:string;initials:string}> = {
+  'admin@transitops.in': { password: 'admin123', name: 'Admin',        initials: 'AD' },
+  'raven@transitops.in': { password: 'raven123', name: 'Raven K.',     initials: 'RK' },
+  'priya@transitops.in': { password: 'priya123', name: 'Priya Nair',   initials: 'PN' },
+  'alex@transitops.in':  { password: 'alex123',  name: 'Alex Johnson', initials: 'AJ' },
+  'demo@transitops.in':  { password: 'demo',     name: 'Demo User',    initials: 'DU' },
+};
+
+const ROLES = [
+  { id: 'fm', role: 'Fleet Manager',     color: '#0d9488', desc: 'Fleet, Maintenance, Analytics' },
+  { id: 'dp', role: 'Dispatcher',        color: '#d97706', desc: 'Dashboard, Trips, Live Board' },
+  { id: 'so', role: 'Safety Officer',    color: '#dc2626', desc: 'Drivers, Compliance, Alerts' },
+  { id: 'fa', role: 'Financial Analyst', color: '#7c3aed', desc: 'Fuel, Expenses, Reports' },
+];
 
 export default function Login() {
-  const [pass, setPass] = useState('');
-  const [err, setErr] = useState('');
   const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState('Dispatcher');
+  const [showPw, setShowPw] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [error, setError] = useState<{title:string;desc:string}|null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failCount, setFailCount] = useState(0);
+  const [resetMsg, setResetMsg] = useState('');
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [subText, setSubText] = useState('Enter your credentials to continue');
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
     try {
-      const res = await api<any>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ password: pass })
-      });
-      localStorage.setItem('to_token', res.token);
-      localStorage.setItem('to_session', JSON.stringify({
-        initials: res.user.name.substring(0, 2).toUpperCase(),
-        name: res.user.name,
-        role: res.user.role
-      }));
+      const s = JSON.parse(localStorage.getItem('to_session') || 'null');
+      if (s?.email) { setEmail(s.email); setSelectedRole(s.role || 'Dispatcher'); }
+    } catch {}
+  }, []);
+
+  function selectRole(role: string) {
+    setSelectedRole(role);
+    setSubText(`Signing in as ${role}`);
+  }
+
+  function handleSignIn() {
+    setError(null);
+    if (!email.trim()) { setError({title:'Email required', desc:'Please enter your email address.'}); return; }
+    if (!password) { setError({title:'Password required', desc:'Please enter your password.'}); return; }
+
+    setLoading(true);
+    setTimeout(() => {
+      const e = email.trim().toLowerCase();
+      const known = DEMO_CREDS[e];
+      let name = 'Demo User', initials = 'DU';
+
+      if (known) {
+        if (known.password !== password) {
+          const fc = failCount + 1;
+          setFailCount(fc);
+          setLoading(false);
+          if (fc >= 3) {
+            setError({title:'Too many failed attempts', desc:`Account temporarily locked. Try again in 15 minutes. (${5-fc} attempts left)`});
+          } else {
+            setError({title:'Invalid credentials', desc:`Incorrect password. ${5-fc} attempts remaining.`});
+          }
+          return;
+        }
+        name = known.name;
+        initials = known.initials;
+      }
+
+      const session = { email: e, role: selectedRole, name, initials };
+      localStorage.setItem('to_session', JSON.stringify(session));
+      if (remember) localStorage.setItem('to_remembered', JSON.stringify({ email: e, role: selectedRole }));
+      else localStorage.removeItem('to_remembered');
+
       navigate('/dashboard');
-    } catch (err: any) {
-      setErr(err.message || 'Login failed');
-    }
-  };
+    }, 900);
+  }
+
+  function handleForgotSend() {
+    if (!forgotEmail.trim()) return;
+    setShowForgot(false);
+    setResetMsg(`Reset link sent to ${forgotEmail} (demo — no actual email sent)`);
+    setTimeout(() => setResetMsg(''), 5000);
+  }
 
   return (
-    <div className="flex h-screen bg-canvas">
-      <div className="flex-1 flex flex-col justify-center px-16 lg:px-32 relative overflow-hidden">
-        <div className="z-10 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-orange-600 text-white flex items-center justify-center font-bold text-xl">T</div>
-            <div className="text-2xl font-bold text-white tracking-tight">TransitOps</div>
+    <div style={{display:'flex',minHeight:'100vh'}}>
+      {/* LEFT PANEL */}
+      <div className="left">
+        <div>
+          <div className="brand">
+            <div className="brand-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M7 17h14M7 13h10M7 9h6" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg></div>
+            <div><div className="brand-name">TransitOps</div><div className="brand-tag">Smart Transport Operations</div></div>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome back</h1>
-          <p className="text-muted">Enter your credentials to access the command center.</p>
+          <h1 className="hero-heading">One login.<br/><span>Four roles.</span></h1>
+          <p className="hero-sub">Your access is scoped immediately after sign-in. No extra setup required.</p>
+          <div className="roles-section">
+            <div className="roles-title">Click to select your role</div>
+            {ROLES.map(r => (
+              <div key={r.id} className={`role-item ${selectedRole === r.role ? 'selected' : ''}`} onClick={() => selectRole(r.role)}>
+                <div className="role-dot" style={{background: r.color}}></div>
+                <div><div className="role-name">{r.role}</div><div className="role-desc">{r.desc}</div></div>
+              </div>
+            ))}
+          </div>
         </div>
+        <div className="left-footer">TransitOps © 2026 · Enterprise Access Only</div>
+      </div>
 
-        <form onSubmit={handleLogin} className="z-10 w-full max-w-sm space-y-5">
-          {err && (
-            <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-lg text-sm font-medium">
-              {err}
+      {/* RIGHT PANEL */}
+      <div className="right">
+        <div className="form-box">
+          <div className="form-title">Sign in to your account</div>
+          <div className="form-sub">{subText}</div>
+
+          {resetMsg && (
+            <div style={{background:'#ecfdf5',border:'1px solid #a7f3d0',borderRadius:8,padding:'12px 14px',marginBottom:16,fontSize:13,color:'#059669',fontWeight:500,display:'flex',alignItems:'center',gap:8}}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              {resetMsg}
             </div>
           )}
-          <div>
-            <label className="block text-xs font-semibold text-muted mb-2">Password</label>
-            <input 
-              type="password" 
-              value={pass} 
-              onChange={e => setPass(e.target.value)}
-              placeholder="demo1234"
-              className="w-full h-11 px-4 rounded-lg bg-panel border border-border text-sm text-primary focus:outline-none focus:border-brand transition-colors"
-            />
-          </div>
-          <Button type="submit" size="lg" className="w-full">Sign In</Button>
-        </form>
-      </div>
-      <div className="hidden lg:block lg:flex-1 bg-panel border-l border-border relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-brand/10 to-transparent"></div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-96 h-96 border border-border/50 rounded-full flex items-center justify-center">
-            <div className="w-64 h-64 border border-border/50 rounded-full flex items-center justify-center">
-              <div className="w-32 h-32 bg-brand/20 blur-3xl rounded-full"></div>
+
+          {error && (
+            <div className="error-box show">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              <div><div className="error-title">{error.title}</div><div className="error-desc">{error.desc}</div></div>
             </div>
+          )}
+
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <div className="input-wrap">
+              <input className={`form-input ${error ? 'err' : ''}`} type="email" placeholder="you@transitops.in" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')handleSignIn()}} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <div className="input-wrap">
+              <input className={`form-input ${error ? 'err' : ''}`} type={showPw?'text':'password'} placeholder="••••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')handleSignIn()}} />
+              <button className="pw-eye" type="button" onClick={()=>setShowPw(!showPw)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  {showPw ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></> : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Role (RBAC)</label>
+            <div className="select-wrap">
+              <select className="form-select" value={selectedRole} onChange={e=>{setSelectedRole(e.target.value);setSubText(`Signing in as ${e.target.value}`)}}>
+                <option value="Dispatcher">Dispatcher</option>
+                <option value="Fleet Manager">Fleet Manager</option>
+                <option value="Safety Officer">Safety Officer</option>
+                <option value="Financial Analyst">Financial Analyst</option>
+              </select>
+              <svg className="select-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div className="form-row">
+            <label className="checkbox-label"><input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} /> Remember me</label>
+            <a href="#" className="forgot" onClick={e=>{e.preventDefault();setForgotEmail(email);setShowForgot(true)}}>Forgot password?</a>
+          </div>
+          <button className="btn-signin" disabled={loading} onClick={handleSignIn}>
+            {loading ? (
+              <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{animation:'spin .8s linear infinite'}}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Signing in…</>
+            ) : (
+              <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Sign In</>
+            )}
+          </button>
+
+          <div className="access-note">
+            <div className="access-title">Access is scoped by role after login</div>
+            <div className="access-row"><div className="access-dot" style={{background:'#0d9488'}}></div>Fleet Manager → Fleet, Maintenance, Analytics</div>
+            <div className="access-row"><div className="access-dot" style={{background:'#d97706'}}></div>Dispatcher → Dashboard, Trips, Live Board</div>
+            <div className="access-row"><div className="access-dot" style={{background:'#dc2626'}}></div>Safety Officer → Drivers, Compliance, Alerts</div>
+            <div className="access-row"><div className="access-dot" style={{background:'#7c3aed'}}></div>Financial Analyst → Fuel &amp; Expenses, Reports</div>
           </div>
         </div>
       </div>
+
+      {/* Forgot password modal */}
+      {showForgot && (
+        <div className="modal-overlay" onClick={e=>{if(e.target===e.currentTarget)setShowForgot(false)}}>
+          <div className="modal-box">
+            <div style={{fontSize:16,fontWeight:700,color:'#0f172a',marginBottom:8}}>Reset your password</div>
+            <div style={{fontSize:13,color:'#64748b',marginBottom:20}}>Enter your email address and we'll send a reset link.</div>
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:'10.5px',fontWeight:700,color:'#6b7280',textTransform:'uppercase',letterSpacing:'.8px',display:'block',marginBottom:6}}>Email</label>
+              <input className="form-input" type="email" placeholder="you@transitops.in" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} style={{width:'100%'}} />
+            </div>
+            <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
+              <button onClick={()=>setShowForgot(false)} style={{padding:'10px 16px',border:'1px solid #e5e7eb',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',background:'#fff',color:'#475569'}}>Cancel</button>
+              <button onClick={handleForgotSend} style={{padding:'10px 16px',background:'#0d9488',color:'#fff',border:'none',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer'}}>Send Reset Link</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

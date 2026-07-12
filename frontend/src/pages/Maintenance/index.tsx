@@ -1,46 +1,57 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../../lib/api';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/Table';
-import { StatusPill } from '../../components/ui/StatusPill';
-import { Button } from '../../components/ui/Button';
+import React, { useState, useEffect } from 'react';
+
+function load(key: string) { try { return JSON.parse(localStorage.getItem('to_' + key) || 'null'); } catch { return null; } }
+function save(key: string, val: any) { localStorage.setItem('to_' + key, JSON.stringify(val)); }
 
 export default function Maintenance() {
-  const { data: logs, isLoading } = useQuery({ queryKey: ['maintenance'], queryFn: () => api('/maintenance') });
+  const [records, setRecords] = useState<any[]>([]);
+  useEffect(() => { setRecords(load('maintenance') || []); }, []);
+  function reload() { setRecords([...(load('maintenance') || [])]); }
 
-  if (isLoading || !logs) return <div className="p-8 text-primary">Loading Maintenance...</div>;
+  function toggleStatus(id: string) {
+    const list = load('maintenance');
+    const r = list.find((x:any) => x.id === id);
+    if (!r) return;
+    r.status = r.status === 'In Shop' ? 'Completed' : 'In Shop';
+    save('maintenance', list);
+    reload();
+  }
+
+  const total = records.reduce((s:number,r:any) => s + Number(r.cost), 0);
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-bold text-white">Service Log</h2>
-        <Button>+ Save Record</Button>
-      </div>
-      
-      <div className="border border-border rounded-xl bg-panel overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Vehicle</TableHead>
-              <TableHead>Service Type</TableHead>
-              <TableHead>Cost</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(logs as any[]).map(l => (
-              <TableRow key={l.id}>
-                <TableCell className="font-semibold">{l.vehicleRegNo}</TableCell>
-                <TableCell>{l.type}</TableCell>
-                <TableCell className="font-mono">₹{l.cost}</TableCell>
-                <TableCell className="font-mono">{l.date}</TableCell>
-                <TableCell><StatusPill status={l.status === 'OPEN' ? 'IN_SHOP' : 'AVAILABLE'} /></TableCell>
-              </TableRow>
+    <>
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">Service Log</div>
+          <div style={{marginLeft:'auto',display:'flex',gap:8}}>
+            <button className="btn btn-ghost btn-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Filter
+            </button>
+            <button className="btn btn-ghost btn-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
+            </button>
+          </div>
+        </div>
+        <table className="data-table">
+          <thead><tr><th>Vehicle</th><th>Service</th><th>Cost</th><th>Date</th><th>Status</th></tr></thead>
+          <tbody>
+            {records.map(r => (
+              <tr key={r.id}>
+                <td style={{fontWeight:600,color:'#0f172a'}}>{r.vehicle}</td>
+                <td style={{color:'#475569'}}>{r.service}</td>
+                <td><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:'#dc2626'}}>₹{Number(r.cost).toLocaleString('en-IN')}</span></td>
+                <td style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'11.5px',color:'#94a3b8'}}>{new Date(r.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+                <td><span className={`pill ${r.status==='In Shop'?'pill-inshop':'pill-completed'}`} style={{cursor:'pointer'}} onClick={()=>toggleStatus(r.id)} title="Click to toggle">{r.status}</span></td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
+        <div style={{padding:'12px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',borderTop:'1px solid #f1f5f9'}}>
+          <span style={{fontSize:11,color:'#94a3b8',fontWeight:500}}>Showing {records.length} records</span>
+          <div style={{fontSize:12,fontWeight:700,color:'#0f172a'}}>Total: <span style={{fontFamily:"'JetBrains Mono',monospace",color:'#dc2626'}}>₹{total.toLocaleString('en-IN')}</span></div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
