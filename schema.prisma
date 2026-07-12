@@ -1,0 +1,161 @@
+// ============================================================================
+// TransitOps — FROZEN DATA CONTRACT
+// This file is agreed once at Hour 0 and NEVER reshaped after.
+// Owner during Hour 0: BA (Backend A). After that: read-only for everyone.
+// Any change requires a 30-second heads-up to all 4 devs + a fresh `prisma generate`.
+// Place at: /backend/prisma/schema.prisma
+// ============================================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Neon/Supabase connection string in .env
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- ENUMS (the shared vocabulary — frontend mirrors these exactly) ----------
+
+enum Role {
+  FLEET_MANAGER
+  DRIVER
+  SAFETY_OFFICER
+  FINANCIAL_ANALYST
+}
+
+enum VehicleType {
+  VAN
+  TRUCK
+  MINI
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  ON_TRIP
+  IN_SHOP
+  RETIRED
+}
+
+enum DriverStatus {
+  AVAILABLE
+  ON_TRIP
+  OFF_DUTY
+  SUSPENDED
+}
+
+enum TripStatus {
+  DRAFT
+  DISPATCHED
+  COMPLETED
+  CANCELLED
+}
+
+enum MaintenanceStatus {
+  OPEN   // vehicle is IN_SHOP while this is OPEN
+  CLOSED
+}
+
+enum ExpenseType {
+  TOLL
+  MAINTENANCE
+  OTHER
+}
+
+// ---------- MODELS ----------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role
+  createdAt    DateTime @default(now())
+}
+
+model Vehicle {
+  id              String        @id @default(cuid())
+  regNo           String        @unique // BUSINESS RULE: registration number is unique
+  name            String
+  type            VehicleType
+  maxLoadKg       Int
+  odometer        Int           @default(0)
+  acquisitionCost Float
+  region          String? // supports Dashboard "region" filter
+  status          VehicleStatus @default(AVAILABLE)
+  createdAt       DateTime      @default(now())
+
+  trips           Trip[]
+  maintenanceLogs MaintenanceLog[]
+  fuelLogs        FuelLog[]
+  expenses        Expense[]
+}
+
+model Driver {
+  id              String       @id @default(cuid())
+  name            String
+  licenseNo       String       @unique
+  licenseCategory String // e.g. "LMV", "HMV"
+  licenseExpiry   DateTime // BUSINESS RULE: expired license => cannot dispatch
+  contact         String
+  safetyScore     Int          @default(100)
+  status          DriverStatus @default(AVAILABLE)
+  createdAt       DateTime     @default(now())
+
+  trips Trip[]
+}
+
+model Trip {
+  id              String     @id @default(cuid())
+  source          String
+  destination     String
+  cargoWeightKg   Int
+  plannedDistance Int // km
+  status          TripStatus @default(DRAFT)
+
+  vehicleId String
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id])
+  driverId  String
+  driver    Driver  @relation(fields: [driverId], references: [id])
+
+  // filled on completion:
+  finalOdometer Int?
+  fuelConsumedL Float?
+  revenue       Float? // used by Reports ROI
+
+  dispatchedAt DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+}
+
+model MaintenanceLog {
+  id        String            @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle           @relation(fields: [vehicleId], references: [id])
+  type      String // e.g. "Oil Change", "Tyre Replacement"
+  cost      Float
+  status    MaintenanceStatus @default(OPEN)
+  notes     String?
+  openedAt  DateTime          @default(now())
+  closedAt  DateTime?
+}
+
+model FuelLog {
+  id        String   @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  liters    Float
+  cost      Float
+  odometer  Int?
+  date      DateTime @default(now())
+}
+
+model Expense {
+  id          String      @id @default(cuid())
+  vehicleId   String
+  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id])
+  type        ExpenseType
+  amount      Float
+  description String?
+  date        DateTime    @default(now())
+}
