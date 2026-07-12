@@ -45,3 +45,10 @@ export async function deleteHandler(req: Request, res: Response, next: NextFunct
     res.status(204).send();
   } catch (err) { next(err); }
 }
+
+export async function tripsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const trips = await vehiclesService.getVehicleTrips(req.params.id);
+    res.json(trips);
+  } catch (err) { next(err); }
+}

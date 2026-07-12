@@ -47,7 +47,7 @@ export async function getReports() {
   const monthlyMap: Record<string, number> = {};
   trips.forEach(t => {
     if (!t.completedAt || !t.revenue) return;
-    const month = t.completedAt.toLocaleString('default', { month: 'short', year: '2-digit' });
+    const month = t.completedAt.toLocaleString('en-US', { month: 'short', year: '2-digit' });
     monthlyMap[month] = (monthlyMap[month] || 0) + t.revenue;
   });
   const monthlyRevenue = Object.entries(monthlyMap).map(([month, value]) => ({ month, value }));

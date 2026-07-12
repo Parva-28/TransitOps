@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth';
-import { listHandler, createHandler, getOneHandler, updateHandler, deleteHandler } from './drivers.controller';
+import { listHandler, createHandler, getOneHandler, updateHandler, deleteHandler, tripsHandler } from './drivers.controller';
 
 export const driversRouter = Router();
 
@@ -24,3 +24,6 @@ driversRouter.patch('/:id', updateHandler);
 
 // DELETE /api/drivers/:id
 driversRouter.delete('/:id', deleteHandler);
+
+// GET /api/drivers/:id/trips
+driversRouter.get('/:id/trips', tripsHandler);

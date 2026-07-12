@@ -88,6 +88,16 @@ export async function updateDriver(id: string, data: Prisma.DriverUpdateInput) {
 
 // ---- Delete ----
 export async function deleteDriver(id: string) {
-  await getDriver(id);
+  await getDriver(id); // ensure exists
   return prisma.driver.delete({ where: { id } });
+}
+
+// ---- Trip history for a driver ----
+export async function getDriverTrips(id: string) {
+  await getDriver(id); // ensure driver exists → 404 if not
+  return prisma.trip.findMany({
+    where: { driverId: id },
+    include: { vehicle: { select: { regNo: true, name: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
 }

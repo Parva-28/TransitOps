@@ -5,6 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as authService from './auth.service';
+import { ValidationError } from '../../middleware/error';
 
 export async function registerHandler(req: Request, res: Response, next: NextFunction) {
   try {
@@ -30,8 +31,8 @@ export async function loginHandler(req: Request, res: Response, next: NextFuncti
     const result = await authService.login(email, password);
     res.json(result);
   } catch (err) {
-    // loginHandler maps ValidationError → 401 (not 422) per CONTRACT.md
-    if ((err as Error).message === 'Invalid credentials') {
+    // Map ValidationError from login → 401 per CONTRACT.md
+    if (err instanceof ValidationError) {
       res.status(401).json({ error: 'Invalid credentials' });
       return;
     }

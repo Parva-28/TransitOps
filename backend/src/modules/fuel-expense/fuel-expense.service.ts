@@ -55,10 +55,11 @@ export async function createExpense(data: {
 
 // ---- Cost summary: per-vehicle fuel + maintenance totals ----
 export async function getCostSummary() {
-  const [vehicles, fuelLogs, maintenanceLogs] = await Promise.all([
+  const [vehicles, fuelLogs, maintenanceLogs, expenses] = await Promise.all([
     prisma.vehicle.findMany({ select: { id: true, regNo: true } }),
     prisma.fuelLog.findMany({ select: { vehicleId: true, cost: true } }),
     prisma.maintenanceLog.findMany({ select: { vehicleId: true, cost: true } }),
+    prisma.expense.findMany({ select: { vehicleId: true, amount: true } }),
   ]);
 
   const result = vehicles.map(v => {
@@ -68,12 +69,15 @@ export async function getCostSummary() {
     const maintenanceCost = maintenanceLogs
       .filter(m => m.vehicleId === v.id)
       .reduce((sum, m) => sum + m.cost, 0);
+    const expenseCost = expenses
+      .filter(e => e.vehicleId === v.id)
+      .reduce((sum, e) => sum + e.amount, 0);
     return {
       id: v.id,
       regNo: v.regNo,
       fuelCost: Math.round(fuelCost * 100) / 100,
       maintenanceCost: Math.round(maintenanceCost * 100) / 100,
-      totalCost: Math.round((fuelCost + maintenanceCost) * 100) / 100,
+      totalCost: Math.round((fuelCost + maintenanceCost + expenseCost) * 100) / 100,
     };
   });
 

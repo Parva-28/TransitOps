@@ -10,14 +10,15 @@ import { Vehicle, Driver } from '@prisma/client';
 const fail = (msg: string): never => { throw new ValidationError(msg); };
 
 export function assertVehicleAvailable(v: Vehicle): void {
-  if (v.status !== 'AVAILABLE') {
-    fail('Retired or In-Shop vehicles cannot be dispatched');
-  }
+  if (v.status === 'ON_TRIP')  fail('Vehicle is already On Trip');
+  if (v.status === 'IN_SHOP')  fail('Retired or In-Shop vehicles cannot be dispatched');
+  if (v.status === 'RETIRED')  fail('Retired or In-Shop vehicles cannot be dispatched');
 }
 
 export function assertDriverAssignable(d: Driver): void {
   if (d.status === 'SUSPENDED') fail('Suspended drivers cannot be assigned');
-  if (d.status !== 'AVAILABLE') fail('Driver is already On Trip');
+  if (d.status === 'OFF_DUTY')  fail('Driver is Off Duty and cannot be assigned');
+  if (d.status === 'ON_TRIP')   fail('Driver is already On Trip');
 }
 
 export function assertLicenseValid(d: Driver): void {

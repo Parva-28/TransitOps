@@ -93,3 +93,13 @@ export async function deleteVehicle(id: string) {
   await getVehicle(id); // ensure exists
   return prisma.vehicle.delete({ where: { id } });
 }
+
+// ---- Trip history for a vehicle ----
+export async function getVehicleTrips(id: string) {
+  await getVehicle(id); // ensure vehicle exists → 404 if not
+  return prisma.trip.findMany({
+    where: { vehicleId: id },
+    include: { driver: { select: { name: true } } },
+    orderBy: { createdAt: 'desc' },
+  });
+}

@@ -24,15 +24,17 @@ export async function getKpis(query: {
     vehicleWhere.region = { equals: query.region, mode: 'insensitive' };
   }
 
-  // Run queries in parallel
+  // Run all queries in parallel — single round-trip to the DB
   const [
     vehicles,
+    allVehicleStatuses,
     activeTrips,
     pendingTrips,
     driversOnDuty,
     recentTrips,
   ] = await Promise.all([
     prisma.vehicle.findMany({ where: vehicleWhere }),
+    prisma.vehicle.findMany({ select: { status: true } }),
     prisma.trip.count({ where: { status: TripStatus.DISPATCHED } }),
     prisma.trip.count({ where: { status: TripStatus.DRAFT } }),
     prisma.driver.count({ where: { status: 'ON_TRIP' } }),
@@ -56,13 +58,12 @@ export async function getKpis(query: {
     ? Math.round((onTripCount / dispatchable) * 100)
     : 0;
 
-  // Status breakdown for ALL vehicles (unfiltered) for the breakdown bar
-  const allVehicles = await prisma.vehicle.findMany({ select: { status: true } });
+  // Status breakdown for ALL vehicles (unfiltered) — already fetched above
   const vehicleStatusBreakdown = {
-    AVAILABLE: allVehicles.filter(v => v.status === 'AVAILABLE').length,
-    ON_TRIP:   allVehicles.filter(v => v.status === 'ON_TRIP').length,
-    IN_SHOP:   allVehicles.filter(v => v.status === 'IN_SHOP').length,
-    RETIRED:   allVehicles.filter(v => v.status === 'RETIRED').length,
+    AVAILABLE: allVehicleStatuses.filter(v => v.status === 'AVAILABLE').length,
+    ON_TRIP:   allVehicleStatuses.filter(v => v.status === 'ON_TRIP').length,
+    IN_SHOP:   allVehicleStatuses.filter(v => v.status === 'IN_SHOP').length,
+    RETIRED:   allVehicleStatuses.filter(v => v.status === 'RETIRED').length,
   };
 
   // Shape recent trips per CONTRACT.md

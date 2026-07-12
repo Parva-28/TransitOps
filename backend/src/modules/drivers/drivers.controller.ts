@@ -32,15 +32,16 @@ export async function getOneHandler(req: Request, res: Response, next: NextFunct
 }
 
 export async function updateHandler(req: Request, res: Response, next: NextFunction) {
-  try {
-    const driver = await driversService.updateDriver(req.params.id, req.body);
-    res.json(driver);
-  } catch (err) { next(err); }
+  try { res.json(await driversService.updateDriver(req.params.id, req.body)); } catch (e) { next(e); }
 }
 
 export async function deleteHandler(req: Request, res: Response, next: NextFunction) {
   try {
     await driversService.deleteDriver(req.params.id);
     res.status(204).send();
-  } catch (err) { next(err); }
+  } catch (e) { next(e); }
+}
+
+export async function tripsHandler(req: Request, res: Response, next: NextFunction) {
+  try { res.json(await driversService.getDriverTrips(req.params.id)); } catch (e) { next(e); }
 }
