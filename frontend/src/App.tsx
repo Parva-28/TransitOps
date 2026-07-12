@@ -12,6 +12,7 @@ import Maintenance from './pages/Maintenance';
 import FuelExpense from './pages/FuelExpense';
 import Reports from './pages/Reports';
 import { Sidebar } from './components/layout/Sidebar';
+import { initMockData } from './utils/mockData';
 
 const queryClient = new QueryClient();
 
@@ -60,9 +61,9 @@ function Topbar() {
 
 function Layout() {
   return (
-    <div style={{display:'flex',minHeight:'100vh'}}>
+    <div style={{display:'flex',minHeight:'100vh',width:'100%'}}>
       <Sidebar />
-      <div className="main-content">
+      <div className="main-content" style={{flex:1, minWidth:0}}>
         <Topbar />
         <div className="page-body">
           <Outlet />
@@ -79,6 +80,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  initMockData();
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>

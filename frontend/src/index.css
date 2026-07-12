@@ -1,7 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-/* Import the original TransitOps design system */
+/* Original TransitOps design system */
 @import './style.css';
+@import './pages.css';
+
+/* React mounts inside #root — inherit body's flex layout */
+#root {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+}

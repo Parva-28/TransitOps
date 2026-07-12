@@ -9,7 +9,6 @@ export default function Drivers() {
   const [filterStatus, setFilterStatus] = useState('');
 
   useEffect(() => { setDrivers(load('drivers') || []); }, []);
-
   function reload() { setDrivers([...(load('drivers') || [])]); }
 
   const filtered = drivers.filter(d => {
@@ -31,6 +30,17 @@ export default function Drivers() {
   return (
     <>
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20,flexWrap:'wrap'}}>
+        <span className="pill pill-available">Available</span>
+        <span className="pill pill-ontrip">On Trip</span>
+        <span className="pill pill-inshop" style={{color:'#dc2626'}}>Off Duty</span>
+        <span className="pill" style={{color:'#7c3aed',background:'#f5f3ff',borderColor:'#ddd6fe'}}>Suspended</span>
+        <div style={{flex:1}}></div>
+        <span style={{fontSize:11.5,color:'#94a3b8',fontWeight:500}}>
+          Only <strong style={{color:'#0f172a'}}>Available</strong> drivers are eligible for dispatch. <strong style={{color:'#dc2626'}}>Expired</strong> licenses block assignment.
+        </span>
+      </div>
+
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20,flexWrap:'wrap'}}>
         <div className="search-bar" style={{flex:1,maxWidth:300}}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" placeholder="Search drivers..." value={search} onChange={e=>setSearch(e.target.value)} />
@@ -43,33 +53,75 @@ export default function Drivers() {
       <div className="card">
         <table className="data-table">
           <thead><tr>
-            <th>Driver</th><th>License</th><th>Category</th><th>Expiry</th><th>Trips</th><th>Safety Score</th><th>Status</th><th>Actions</th>
+            <th>Driver</th><th>License No.</th><th>Category</th><th>Expiry Date</th><th>Trips Done</th><th>Safety Score</th><th>Status</th><th>Actions</th>
           </tr></thead>
           <tbody>
             {filtered.map(d => {
               const sc = d.score;
               const scColor = sc >= 85 ? '#059669' : sc >= 65 ? '#d97706' : '#dc2626';
+              const [em, ey] = d.expiry.split('/');
+              const expiryDate = new Date(Number(ey), Number(em)-1, 1);
+              const today = new Date();
+              const daysLeft = Math.ceil((expiryDate.getTime() - today.getTime()) / 86400000);
+              const expired = daysLeft < 0;
+              const nearExpiry = !expired && daysLeft <= 60;
+              const catClass = d.category === 'LMV' ? 'cat-lmv' : d.category === 'HGV' ? 'cat-hgv' : 'cat-mcv';
+              
               return (
                 <tr key={d.id}>
-                  <td><div style={{display:'flex',alignItems:'center',gap:10}}><div style={{width:32,height:32,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,background:d.color,color:d.textColor}}>{d.initials}</div><div><div style={{fontSize:13,fontWeight:600,color:'#0f172a'}}>{d.name}</div><div style={{fontSize:11,color:'#94a3b8'}}>{d.role}</div></div></div></td>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div className="driver-av" style={{background:d.color,color:d.textColor}}>{d.initials}</div>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,color:'#0f172a'}}>{d.name}</div>
+                        <div style={{fontSize:11,color:'#94a3b8'}}>{d.role}</div>
+                      </div>
+                    </div>
+                  </td>
                   <td><span className="mono-id">{d.license}</span></td>
-                  <td>{d.category}</td>
-                  <td style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:'#0f172a'}}>{d.expiry}</td>
-                  <td style={{fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:600,color:'#0f172a'}}>{d.trips}</td>
-                  <td><div style={{display:'flex',alignItems:'center',gap:8}}><div style={{width:100,height:6,background:'#e2e8f0',borderRadius:3,overflow:'hidden'}}><div style={{height:'100%',borderRadius:3,width:`${sc}%`,background:'linear-gradient(to right,#ef4444,#f59e0b,#059669)'}}></div></div><span style={{fontSize:12,fontWeight:700,color:scColor,fontFamily:"'JetBrains Mono',monospace"}}>{sc}%</span></div></td>
-                  <td><span className={`pill ${STATUS_PILL[d.status]||''}`}>{d.status}</span></td>
-                  <td><div style={{display:'flex',gap:6}}>
-                    {d.status === 'Available' && <><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'On Trip')}>On Trip</button><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Suspended')}>Suspend</button></>}
-                    {d.status === 'On Trip' && <><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Available')}>Available</button><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Suspended')}>Suspend</button></>}
-                    {d.status === 'Suspended' && <button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Available')}>Reinstate</button>}
-                    {d.status === 'Off Duty' && <button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Available')}>Activate</button>}
-                  </div></td>
+                  <td><span className={`cat-badge ${catClass}`}>{d.category}</span></td>
+                  <td>
+                    <span style={{fontSize:12,fontWeight:600,color:expired?'#dc2626':nearExpiry?'#d97706':'#0f172a'}}>{d.expiry}</span>
+                    {expired && <div style={{display:'flex',alignItems:'center',gap:4,fontSize:10.5,fontWeight:700,color:'#991b1b',background:'#fee2e2',padding:'1px 6px',borderRadius:4,width:'fit-content',marginTop:2}}>EXPIRED</div>}
+                    {nearExpiry && <div className="expiry-warn" style={{marginTop:2}}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>{daysLeft} days left</div>}
+                  </td>
+                  <td style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,fontWeight:700,color:'#0f172a'}}>{d.trips}</td>
+                  <td>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <div className="score-track"><div className="score-fill" style={{width:`${sc}%`,background:`linear-gradient(to right, ${scColor}, ${scColor})`}}></div></div>
+                      <span style={{fontSize:12,fontWeight:700,color:scColor,fontFamily:"'JetBrains Mono',monospace"}}>{sc}%</span>
+                    </div>
+                  </td>
+                  <td><span className={`pill ${STATUS_PILL[d.status]||''}`} style={d.status==='Suspended'?{color:'#7c3aed',background:'#f5f3ff',borderColor:'#ddd6fe'}:{}}>{d.status}</span></td>
+                  <td>
+                    <div style={{display:'flex',gap:6}}>
+                      {expired ? (
+                        <><button className="btn btn-ghost btn-sm" style={{opacity:0.4}} disabled>Blocked</button><button className="btn btn-ghost btn-sm" onClick={() => {
+                          const list = load('drivers');
+                          const drv = list.find((x:any) => x.id === d.id);
+                          if(drv) { drv.expiry = '12/2029'; save('drivers', list); reload(); }
+                        }}>Renew</button></>
+                      ) : d.status === 'Available' ? (
+                        <><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'On Trip')}>On Trip</button><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Suspended')}>Suspend</button></>
+                      ) : d.status === 'On Trip' ? (
+                        <><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Available')}>Available</button><button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Suspended')}>Suspend</button></>
+                      ) : d.status === 'Suspended' ? (
+                        <button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Available')}>Reinstate</button>
+                      ) : (
+                        <button className="btn btn-ghost btn-sm" onClick={()=>changeStatus(d.id,'Available')}>Activate</button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
             {filtered.length === 0 && <tr><td colSpan={8} style={{textAlign:'center',padding:40,color:'#94a3b8'}}>No drivers found</td></tr>}
           </tbody>
         </table>
+        <div style={{background:'#fafafa',borderTop:'1px solid #f1f5f9',padding:'14px 20px',display:'flex',alignItems:'center',gap:8,fontSize:11.5,color:'#94a3b8'}}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Only <strong style={{color:'#0f172a',margin:'0 3px'}}>Available</strong> drivers are eligible for dispatch. <strong style={{color:'#dc2626',margin:'0 3px'}}>Expired</strong> licenses block trip assignment automatically.
+        </div>
       </div>
     </>
   );
