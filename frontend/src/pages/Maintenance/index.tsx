@@ -47,6 +47,11 @@ export default function Maintenance() {
   const total = filtered.reduce((s:number,r:any) => s + Number(r.cost), 0);
 
 
+  function exportCSV() {
+    const csv = [['Vehicle','Service','Cost','Date','Status'].join(','), ...filtered.map(r => [r.vehicle, r.service, r.cost, r.date, r.status].join(','))].join('\n');
+    const a = document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download='maintenance.csv'; a.click();
+  }
+
   return (
     <>
       <div className="maint-grid">
@@ -100,7 +105,7 @@ export default function Maintenance() {
             <div className="card-title">Service Log</div>
             <div style={{marginLeft:'auto',display:'flex',gap:8}}>
               <button className="btn btn-ghost btn-sm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Filter</button>
-              <button className="btn btn-ghost btn-sm"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+              <button className="btn btn-ghost btn-sm" onClick={exportCSV}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
             </div>
           </div>
           <table className="data-table">

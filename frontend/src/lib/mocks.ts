@@ -1,24 +1,9 @@
 // Mocks reflecting the API contract in PLAN_BACKEND.md / plan.md
 const SEED = {
-  vehicles: [
-    { id: 'GJ01AJ3463', regNo: 'VAN-05', name: 'Ford Transit', type: 'VAN', maxLoadKg: 500, status: 'AVAILABLE' },
-    { id: 'GJ01AJ3945', regNo: 'TRUCK-11', name: 'Volvo FH', type: 'TRUCK', maxLoadKg: 5000, status: 'ON_TRIP' },
-    { id: 'GJ01AJ3129', regNo: 'MINI-03', name: 'Tata Ace', type: 'MINI', maxLoadKg: 750, status: 'IN_SHOP' },
-    { id: 'GJ01AJ3000', regNo: 'VAN-09', name: 'Mahindra Supro', type: 'VAN', maxLoadKg: 500, status: 'AVAILABLE' },
-  ],
-  drivers: [
-    { id: 'DRV001', name: 'Alex', licenseNo: 'DL-88213-L', licenseCategory: 'LMV', licenseExpiry: '2028-10-01', safetyScore: 91, status: 'AVAILABLE' },
-    { id: 'DRV002', name: 'John', licenseNo: 'DL-44901-H', licenseCategory: 'HMV', licenseExpiry: '2026-08-01', safetyScore: 78, status: 'ON_TRIP' },
-    { id: 'DRV003', name: 'Priya', licenseNo: 'DL-22341-M', licenseCategory: 'LMV', licenseExpiry: '2026-05-01', safetyScore: 62, status: 'AVAILABLE' },
-    { id: 'DRV004', name: 'Suresh', licenseNo: 'DL-81490-L', licenseCategory: 'HMV', licenseExpiry: '2029-11-01', safetyScore: 95, status: 'SUSPENDED' },
-  ],
-  trips: [
-    { id: 'TRP-2041', source: 'Gandhinagar', destination: 'Ahmedabad', vehicleRegNo: 'TRUCK-11', driver: 'John', status: 'DISPATCHED', cargoWeightKg: 1200 },
-    { id: 'TRP-2044', source: 'Vatva', destination: 'Sanand', vehicleRegNo: null, driver: null, status: 'DRAFT', cargoWeightKg: 600 },
-  ],
-  maintenance: [
-    { id: 'MNT001', vehicleId: 'GJ01AJ3129', vehicleRegNo: 'MINI-03', type: 'Oil Change', cost: 3500, date: '2026-07-01', status: 'OPEN' },
-  ],
+  vehicles: [],
+  drivers: [],
+  trips: [],
+  maintenance: [],
   expenses: [],
   fuelLogs: [],
 };
@@ -70,7 +55,51 @@ export async function mockResolve<T>(path: string, opts: RequestInit): Promise<T
         return resolve({
           activeVehicles: 5, availableVehicles: 2, inMaintenance: 1, activeTrips: 3, pendingTrips: 4, driversOnDuty: 3, fleetUtilizationPct: 87,
           vehicleStatusBreakdown: { AVAILABLE: 2, ON_TRIP: 3, IN_SHOP: 1, RETIRED: 0 },
-          recentTrips: []
+          recentTrips: [],
+          fleetActivity: [
+            { day: 'Mon', distance: 240, fuel: 32 },
+            { day: 'Tue', distance: 380, fuel: 48 },
+            { day: 'Wed', distance: 510, fuel: 62 },
+            { day: 'Thu', distance: 410, fuel: 51 },
+            { day: 'Fri', distance: 680, fuel: 82 },
+            { day: 'Sat', distance: 490, fuel: 58 },
+            { day: 'Sun', distance: 210, fuel: 28 },
+          ]
+        } as T);
+      }
+
+      if (path === '/analytics/reports' && method === 'GET') {
+        return resolve({
+          monthlyRevenue: [
+            { month: 'Jan', revenue: 85000, cost: 42000 },
+            { month: 'Feb', revenue: 92000, cost: 44000 },
+            { month: 'Mar', revenue: 88000, cost: 43500 },
+            { month: 'Apr', revenue: 105000, cost: 48000 },
+            { month: 'May', revenue: 112000, cost: 51000 },
+            { month: 'Jun', revenue: 118000, cost: 53000 },
+            { month: 'Jul', revenue: 125000, cost: 55000 },
+          ],
+          maintenanceCosts: [
+            { vehicle: 'VAN-05', parts: 12000, labor: 8000 },
+            { vehicle: 'TRUCK-11', parts: 24000, labor: 15000 },
+            { vehicle: 'MINI-03', parts: 4500, labor: 3000 },
+            { vehicle: 'VAN-09', parts: 8000, labor: 6000 },
+            { vehicle: 'TRUCK-02', parts: 18000, labor: 12000 },
+          ],
+          driverPerformance: [
+            { name: 'Alex J.', trips: 42, safetyScore: 91, hours: 160 },
+            { name: 'John D.', trips: 28, safetyScore: 78, hours: 125 },
+            { name: 'Priya N.', trips: 35, safetyScore: 88, hours: 140 },
+            { name: 'Suresh R.', trips: 12, safetyScore: 62, hours: 85 },
+            { name: 'Maria C.', trips: 48, safetyScore: 95, hours: 175 },
+          ],
+          vehicleUtilization: [
+            { week: 'W1', van: 65, truck: 45, mini: 80 },
+            { week: 'W2', van: 72, truck: 52, mini: 75 },
+            { week: 'W3', van: 68, truck: 60, mini: 85 },
+            { week: 'W4', van: 85, truck: 75, mini: 90 },
+            { week: 'W5', van: 92, truck: 82, mini: 95 },
+          ]
         } as T);
       }
 

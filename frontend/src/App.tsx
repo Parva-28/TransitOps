@@ -31,28 +31,31 @@ const PAGE_TITLES: Record<string, { title: string; breadcrumb: string }> = {
   '/settings': { title: 'Settings', breadcrumb: 'System' },
 };
 
-function Topbar({ search, setSearch }: { search: string; setSearch: (v:string)=>void }) {
+function WelcomeBar({ search, setSearch }: { search: string; setSearch: (v:string)=>void }) {
   const location = useLocation();
   const info = PAGE_TITLES[location.pathname] || { title: 'TransitOps', breadcrumb: '' };
+  const session = getSession();
   const now = new Date();
+  const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
+
   return (
-    <div className="topbar">
-      <div className="topbar-left">
-        <div className="breadcrumb">{info.breadcrumb}</div>
-        <div className="page-title">{info.title}</div>
+    <div className="welcome-bar">
+      <div>
+        <div className="welcome-text">{greeting}, {session?.name?.split(' ')[0] || 'there'} 👋</div>
+        <div className="welcome-sub">{info.breadcrumb} · {info.title}</div>
       </div>
-      <div className="topbar-right">
-        <div className="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <div style={{display:'flex',alignItems:'center',gap:12}}>
+        <div className="topnav-search">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input type="text" placeholder="Search fleet, drivers, trips..." value={search} onChange={e=>setSearch(e.target.value)} />
         </div>
-        <div className="topbar-date">
-          <span style={{fontWeight:700,color:'#475569'}}>{now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric'})}</span>
-          <span>{now.toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</span>
+        <div className="topnav-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <div className="topnav-badge"></div>
         </div>
-        <div style={{position:'relative',cursor:'pointer'}}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-          <div style={{position:'absolute',top:-2,right:-2,width:8,height:8,background:'#dc2626',borderRadius:'50%',border:'2px solid #f0efea'}}></div>
+        <div style={{fontFamily:'var(--mono)',fontSize:11,color:'var(--tx-muted)',display:'flex',flexDirection:'column',alignItems:'flex-end'}}>
+          <span style={{fontWeight:700,color:'var(--tx-secondary)'}}>{now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric'})}</span>
+          <span>{now.toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</span>
         </div>
       </div>
     </div>
@@ -62,10 +65,10 @@ function Topbar({ search, setSearch }: { search: string; setSearch: (v:string)=>
 function Layout() {
   const [searchQuery, setSearchQuery] = React.useState('');
   return (
-    <div style={{display:'flex',minHeight:'100vh',width:'100%'}}>
+    <div style={{display:'flex',flexDirection:'column',minHeight:'100vh',width:'100%'}}>
       <Sidebar />
       <div className="main-content" style={{flex:1, minWidth:0}}>
-        <Topbar search={searchQuery} setSearch={setSearchQuery} />
+        <WelcomeBar search={searchQuery} setSearch={setSearchQuery} />
         <div className="page-body">
           <Outlet context={{ searchQuery }} />
         </div>
