@@ -33,9 +33,16 @@
 .driver-cell{display:flex;align-items:center;gap:8px}
 .d-avatar{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0}
 .cargo-cell{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:#111;text-align:right}
+/* Notifications dropdown */
+.notif-dropdown{position:absolute;right:0;top:calc(100% + 10px);background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);width:280px;z-index:100;display:none}
+.notif-dropdown.show{display:block}
+.notif-item{padding:12px 16px;border-bottom:1px solid #f1f5f9;cursor:pointer}
+.notif-item:hover{background:#f8fafc}
+.notif-item:last-child{border-bottom:none}
 </style>
 </head>
 <body>
+<script src="transitops-state.js"></script>
 
 <!-- SIDEBAR -->
 <nav class="sidebar">
@@ -74,13 +81,7 @@
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Settings
     </a>
   </div>
-  <div class="sidebar-footer">
-    <div class="avatar" style="background:#1e3a5f">RK</div>
-    <div class="avatar-info">
-      <div class="avatar-name">Raven K.</div>
-      <div class="avatar-role">Dispatcher</div>
-    </div>
-  </div>
+  <div class="sidebar-footer" id="sidebar-user"></div>
 </nav>
 
 <!-- MAIN -->
@@ -96,19 +97,35 @@
         <input type="text" placeholder="Search fleet, drivers, trips...">
       </div>
       <div class="topbar-date"><span style="font-weight:700;color:#475569">Mon 12</span><span>Jul 2026</span><span style="font-size:9px">10:30</span></div>
-      <div style="position:relative;cursor:pointer">
+      <div style="position:relative;cursor:pointer" onclick="toggleNotifications()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
-        <div style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#dc2626;border-radius:50%;border:2px solid #f0efea"></div>
+        <div id="notif-dot" style="position:absolute;top:-2px;right:-2px;width:8px;height:8px;background:#dc2626;border-radius:50%;border:2px solid #f0efea"></div>
+        <div class="notif-dropdown" id="notif-dropdown">
+          <div style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;color:#0f172a">Notifications</div>
+          <div class="notif-item" onclick="event.stopPropagation();window.location.href='04-drivers.html'">
+            <div style="font-size:12px;font-weight:600;color:#0f172a">⚠ License expiring soon</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px">Priya Nair — expires 08/2026</div>
+          </div>
+          <div class="notif-item" onclick="event.stopPropagation();window.location.href='06-maintenance.html'">
+            <div style="font-size:12px;font-weight:600;color:#0f172a">🔧 Van-05 in shop</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px">Oil change in progress</div>
+          </div>
+          <div class="notif-item" onclick="event.stopPropagation();window.location.href='05-trip-dispatcher.html'">
+            <div style="font-size:12px;font-weight:600;color:#0f172a">🚚 New trip dispatched</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px">TRP-2041 — Gandhinagar → Ahmedabad</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="page-body">
     <!-- Alert Banner -->
-    <div class="alert-banner alert-amber">
+    <div class="alert-banner alert-amber" id="alert-banner">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <span><strong>3 driver licenses expire within 7 days.</strong> Review compliance before next dispatch.</span>
-      <a href="#" class="alert-link">Review <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+      <a href="04-drivers.html" class="alert-link">Review <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+      <button onclick="document.getElementById('alert-banner').style.display='none'" style="background:none;border:none;cursor:pointer;color:#b45309;margin-left:auto;padding:0 4px;font-size:16px">✕</button>
     </div>
 
     <!-- KPI Row -->
@@ -300,5 +317,63 @@
     </div>
   </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Sidebar user
+  const s = TO.getSession();
+  document.getElementById('sidebar-user').innerHTML = `
+    <div class="avatar" style="background:#1e3a5f">${s.initials||'RK'}</div>
+    <div class="avatar-info"><div class="avatar-name">${s.name||'Raven K.'}</div><div class="avatar-role">${s.role||'Dispatcher'}</div></div>`;
+
+  // Live date/time in topbar
+  const now = new Date();
+  const dateEl = document.querySelector('.topbar-date');
+  if (dateEl) dateEl.innerHTML = `<span style="font-weight:700;color:#475569">${now.toLocaleDateString('en-IN',{weekday:'short',day:'numeric'})}</span><span>${now.toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</span><span style="font-size:9px">${now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</span>`;
+
+  // KPI updates from state
+  const vehicles = TO.getVehicles();
+  const trips    = TO.getTrips();
+  const avail    = vehicles.filter(v=>v.status==='Available').length;
+  const onTrip   = vehicles.filter(v=>v.status==='On Trip').length;
+  const util     = vehicles.length ? Math.round((onTrip/vehicles.length)*100) : 0;
+  const activeT  = trips.filter(t=>t.status==='Dispatched').length;
+
+  // Search
+  const searchInput = document.querySelector('.search-bar input');
+  if (searchInput) {
+    searchInput.addEventListener('input', e => {
+      const q = e.target.value.toLowerCase();
+      document.querySelectorAll('.data-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // Chart tab switching
+  document.querySelectorAll('.chart-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      showToast('Chart updated to ' + tab.textContent + ' view', 'info');
+    });
+  });
+
+  // Filter/Export buttons
+  const filterBtn = document.querySelector('.btn-ghost.btn-sm');
+  // handled inline
+});
+
+function toggleNotifications() {
+  const dd = document.getElementById('notif-dropdown');
+  dd.classList.toggle('show');
+  if (dd.classList.contains('show')) {
+    document.getElementById('notif-dot').style.display = 'none';
+  }
+}
+document.addEventListener('click', e => {
+  const dd = document.getElementById('notif-dropdown');
+  if (dd && !dd.closest('[onclick]')?.contains(e.target)) dd.classList.remove('show');
+});
+</script>
 </body>
 </html>

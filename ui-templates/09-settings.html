@@ -31,6 +31,7 @@
 </style>
 </head>
 <body>
+<script src="transitops-state.js"></script>
 <nav class="sidebar">
   <div class="sidebar-logo"><div style="display:flex;align-items:center;gap:10px"><div class="logo-mark">T</div><div><div style="font-size:14px;font-weight:700;color:#f1f5f9">TransitOps</div><div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Operations</div></div></div></div>
   <div class="sidebar-nav">
@@ -46,7 +47,7 @@
     <div class="nav-group-label" style="padding-top:16px">System</div>
     <a class="nav-item active" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</a>
   </div>
-  <div class="sidebar-footer"><div class="avatar" style="background:#0c4a6e">AD</div><div class="avatar-info"><div class="avatar-name">Admin</div><div class="avatar-role">Super Admin</div></div></div>
+  <div class="sidebar-footer" id="sidebar-user"></div>
 </nav>
 
 <div class="main-content">
@@ -56,7 +57,7 @@
       <div class="page-title">Settings &amp; RBAC</div>
     </div>
     <div class="topbar-right">
-      <button class="btn btn-primary" onclick="window.location.href='15-action-success.html'">Save Changes</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save Changes</button>
     </div>
   </div>
 
@@ -84,22 +85,22 @@
             <div class="form-section-title">System</div>
             <div class="setting-row">
               <div><div class="setting-label">License Expiry Alerts</div><div class="setting-desc">Warn 30 days before expiry</div></div>
-              <div class="toggle on"></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
             </div>
             <div class="setting-row">
               <div><div class="setting-label">Capacity Validation</div><div class="setting-desc">Block dispatch on overload</div></div>
-              <div class="toggle on"></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
             </div>
             <div class="setting-row">
               <div><div class="setting-label">Auto-update Driver Status</div><div class="setting-desc">On trip dispatch/complete</div></div>
-              <div class="toggle on"></div>
+              <div class="toggle on" onclick="this.classList.toggle('on')"></div>
             </div>
             <div class="setting-row">
               <div><div class="setting-label">Two-Factor Auth</div><div class="setting-desc">Require 2FA for login</div></div>
-              <div class="toggle"></div>
+              <div class="toggle" onclick="this.classList.toggle('on')"></div>
             </div>
             <div style="margin-top:20px">
-              <button class="btn btn-primary" style="width:100%" onclick="window.location.href='15-action-success.html'">Save Configuration</button>
+              <button class="btn btn-primary" style="width:100%" onclick="saveSettings()">Save Configuration</button>
             </div>
           </div>
         </div>
@@ -196,6 +197,53 @@
 document.querySelectorAll('.toggle').forEach(t => {
   t.addEventListener('click', () => t.classList.toggle('on'));
 });
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebarUser();
+  loadSettings();
+});
+
+function renderSidebarUser() {
+  const s = TO.getSession();
+  document.getElementById('sidebar-user').innerHTML = `
+    <div class="avatar" style="background:#0c4a6e">${s.initials||'AD'}</div>
+    <div class="avatar-info"><div class="avatar-name">${s.name||'Admin'}</div><div class="avatar-role">${s.role||'Super Admin'}</div></div>`;
+}
+
+function loadSettings() {
+  const s = TO.getSettings();
+  const inputs = document.querySelectorAll('.form-input[type="text"], .form-input:not([type])');
+  if (inputs[0]) inputs[0].value = s.company || '';
+  if (inputs[1]) inputs[1].value = s.city    || '';
+  // Currency
+  const currSel = document.querySelector('.form-select');
+  if (currSel) currSel.value = s.currency === 'USD' ? 'USD ($)' : 'INR (₹)';
+  // Toggles
+  const toggles = document.querySelectorAll('.toggle');
+  const keys = ['licenseAlerts','capacityValidation','autoUpdateStatus','twoFactor'];
+  toggles.forEach((t, i) => {
+    if (keys[i] !== undefined) {
+      if (s[keys[i]]) t.classList.add('on'); else t.classList.remove('on');
+    }
+  });
+}
+
+function saveSettings() {
+  const inputs  = document.querySelectorAll('.form-input[type="text"], .form-input:not([type])');
+  const currSel = document.querySelector('.form-select');
+  const toggles = document.querySelectorAll('.toggle');
+  const keys    = ['licenseAlerts','capacityValidation','autoUpdateStatus','twoFactor'];
+  const s = TO.getSettings();
+  if (inputs[0]) s.company  = inputs[0].value;
+  if (inputs[1]) s.city     = inputs[1].value;
+  if (currSel)   s.currency = currSel.value.includes('USD') ? 'USD' : 'INR';
+  toggles.forEach((t, i) => { if (keys[i]) s[keys[i]] = t.classList.contains('on'); });
+  TO.saveSettings(s);
+  /* BACKEND STUB: PUT /api/settings { ...s } */
+  showToast('Settings saved successfully', 'success');
+}
 </script>
 </body>
 </html>

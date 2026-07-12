@@ -25,6 +25,7 @@
 </style>
 </head>
 <body>
+<script src="transitops-state.js"></script>
 <nav class="sidebar">
   <div class="sidebar-logo"><div style="display:flex;align-items:center;gap:10px"><div class="logo-mark">T</div><div><div style="font-size:14px;font-weight:700;color:#f1f5f9">TransitOps</div><div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Operations</div></div></div></div>
   <div class="sidebar-nav">
@@ -38,7 +39,7 @@
     <a class="nav-item active" href="#"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Fuel &amp; Expenses</a>
     <a class="nav-item" href="08-analytics.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Analytics</a>
   </div>
-  <div class="sidebar-footer"><div class="avatar" style="background:#5b21b6">FA</div><div class="avatar-info"><div class="avatar-name">Finance Dept.</div><div class="avatar-role">Financial Analyst</div></div></div>
+  <div class="sidebar-footer" id="sidebar-user"></div>
 </nav>
 
 <div class="main-content">
@@ -48,15 +49,13 @@
       <div class="page-title">Fuel &amp; Expense Management</div>
     </div>
     <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="window.location.href='15-action-success.html'">
+      <button class="btn btn-ghost btn-sm" onclick="exportFuelCSV()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export CSV
       </button>
-      <button class="btn btn-primary" onclick="window.location.href='14-add-expense.html'">
+      <button class="btn btn-primary" onclick="openAddExpenseModal('Fuel')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Log Fuel
       </button>
-      <button class="btn btn-ghost">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Expense
-      </button>
+      <button class="btn btn-ghost" onclick="openAddExpenseModal('Expense')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Add Expense</button>
     </div>
   </div>
 
@@ -171,5 +170,105 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebarUser();
+  renderFuelTables();
+});
+
+function renderSidebarUser() {
+  const s = TO.getSession();
+  document.getElementById('sidebar-user').innerHTML = `
+    <div class="avatar" style="background:#5b21b6">${s.initials||'FA'}</div>
+    <div class="avatar-info"><div class="avatar-name">${s.name||'Finance Dept.'}</div><div class="avatar-role">${s.role||'Financial Analyst'}</div></div>`;
+}
+
+function renderFuelTables() {
+  const expenses = TO.getExpenses();
+  const fuel  = expenses.filter(e => e.type === 'Fuel');
+  const other = expenses.filter(e => e.type === 'Expense');
+
+  // Fuel table
+  const fuelTbody = document.querySelectorAll('.fuel-table tbody')[0];
+  if (fuelTbody) {
+    fuelTbody.innerHTML = fuel.length ? fuel.map(e => `
+      <tr>
+        <td style="font-weight:600;color:#0f172a">${e.vehicle}</td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">${new Date(e.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+        <td><span class="liters">${e.liters||'—'} L</span></td>
+        <td><span class="fuel-cost">₹${Number(e.amount).toLocaleString('en-IN')}</span></td>
+      </tr>`).join('') : '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8">No fuel records</td></tr>';
+    // Update footer
+    const total = fuel.reduce((s,e)=>s+Number(e.amount),0);
+    const fuelFooter = document.querySelectorAll('.fuel-table + div')[0];
+    if (fuelFooter) fuelFooter.innerHTML = `<span style="font-size:11px;color:#94a3b8">${fuel.length} entries this month</span><span style="font-size:12px;font-weight:700;color:#0f172a;font-family:'JetBrains Mono',monospace">₹${total.toLocaleString('en-IN')}</span>`;
+  }
+
+  // Other expenses table
+  const otherTbody = document.querySelectorAll('.fuel-table tbody')[1];
+  if (otherTbody) {
+    otherTbody.innerHTML = other.length ? other.map(e => `
+      <tr>
+        <td><span class="mono-id">${e.receipt||'—'}</span></td>
+        <td style="font-weight:600;color:#0f172a">${e.vehicle}</td>
+        <td><span class="fuel-cost" style="font-size:12px">₹${Number(e.amount).toLocaleString('en-IN')}</span></td>
+        <td><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#94a3b8">₹0</span></td>
+        <td><span style="color:#94a3b8;font-size:12px">—</span></td>
+      </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8">No expense records</td></tr>';
+  }
+
+  // Update total bar
+  const totalFuel  = fuel.reduce((s,e)=>s+Number(e.amount),0);
+  const totalOther = other.reduce((s,e)=>s+Number(e.amount),0);
+  const grand      = totalFuel + totalOther;
+  const bars = document.querySelectorAll('.total-bar-val');
+  if (bars[0]) bars[0].textContent = '₹' + totalFuel.toLocaleString('en-IN');
+  if (bars[1]) bars[1].textContent = '₹' + totalOther.toLocaleString('en-IN');
+  const grandEl = document.querySelector('.total-grand');
+  if (grandEl) grandEl.textContent = '₹' + grand.toLocaleString('en-IN');
+}
+
+function openAddExpenseModal(type) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  const isF = type === 'Fuel';
+  overlay.innerHTML = `<div style="background:#fff;border-radius:12px;padding:28px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="font-size:15px;font-weight:700;margin-bottom:20px">Log ${type}</div>
+    <div style="margin-bottom:14px">
+      <label class="form-label">Vehicle</label>
+      <select id="ae-vehicle" class="form-select">${TO.getVehicles().map(v=>`<option>${v.name}</option>`).join('')}</select>
+    </div>
+    ${isF ? `<div style="margin-bottom:14px"><label class="form-label">Liters Filled</label><input id="ae-liters" type="number" class="form-input" placeholder="e.g. 50"></div>` : ''}
+    <div style="margin-bottom:14px"><label class="form-label">Amount (₹)</label><input id="ae-amount" type="number" class="form-input" placeholder="e.g. 5000"></div>
+    <div style="margin-bottom:14px"><label class="form-label">Date</label><input id="ae-date" type="date" class="form-input" value="${new Date().toISOString().split('T')[0]}"></div>
+    <div style="margin-bottom:20px"><label class="form-label">Receipt No.</label><input id="ae-receipt" type="text" class="form-input" placeholder="e.g. REC-1001"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="this.closest('[style]').remove()" class="btn btn-ghost">Cancel</button>
+      <button onclick="saveExpense('${type}', this)" class="btn btn-primary">Save ${type}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+}
+
+function saveExpense(type, btn) {
+  const vehicle = document.getElementById('ae-vehicle').value;
+  const amount  = parseInt(document.getElementById('ae-amount').value) || 0;
+  const date    = document.getElementById('ae-date').value;
+  const receipt = document.getElementById('ae-receipt').value;
+  const liters  = type === 'Fuel' ? (parseInt(document.getElementById('ae-liters').value)||null) : null;
+  if (!amount) { showToast('Please enter an amount', 'error'); return; }
+  TO.addExpense({ id: TO.genId('EXP'), vehicle, type, liters, amount, date, receipt });
+  btn.closest('[style]').remove();
+  renderFuelTables();
+  showToast(`${type} record saved`, 'success');
+}
+
+function exportFuelCSV() {
+  const expenses = TO.getExpenses();
+  exportCSV(['Vehicle','Type','Liters','Amount (₹)','Date','Receipt'], expenses.map(e=>[e.vehicle,e.type,e.liters||'',e.amount,e.date,e.receipt||'']), 'fuel-expenses.csv');
+}
+</script>
 </body>
 </html>

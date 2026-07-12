@@ -24,6 +24,7 @@
 </style>
 </head>
 <body>
+<script src="transitops-state.js"></script>
 <nav class="sidebar">
   <div class="sidebar-logo"><div style="display:flex;align-items:center;gap:10px"><div class="logo-mark">T</div><div><div style="font-size:14px;font-weight:700;color:#f1f5f9">TransitOps</div><div style="font-size:9px;color:#475569;text-transform:uppercase;letter-spacing:.12em;font-weight:600">Operations</div></div></div></div>
   <div class="sidebar-nav">
@@ -37,7 +38,7 @@
     <a class="nav-item" href="07-fuel-expenses.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Fuel &amp; Expenses</a>
     <a class="nav-item" href="08-analytics.html"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>Analytics</a>
   </div>
-  <div class="sidebar-footer"><div class="avatar" style="background:#0f766e">FM</div><div class="avatar-info"><div class="avatar-name">Fleet Mgr.</div><div class="avatar-role">Fleet Manager</div></div></div>
+  <div class="sidebar-footer" id="sidebar-user"></div>
 </nav>
 
 <div class="main-content">
@@ -46,7 +47,7 @@
       <div class="breadcrumb">Operations</div>
       <div class="page-title">Maintenance</div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:12px;padding:4px 10px;background:#fee2e2;border-radius:999px">
-        <span style="font-size:12px;font-weight:700;color:#dc2626;font-family:'JetBrains Mono',monospace">3</span>
+        <span id="in-shop-count" style="font-size:12px;font-weight:700;color:#dc2626;font-family:'JetBrains Mono',monospace">0</span>
         <span style="font-size:11px;color:#b91c1c;font-weight:500">vehicles in shop</span>
       </div>
     </div>
@@ -81,10 +82,7 @@
             <label class="form-label">Status</label>
             <select class="form-select"><option>Active</option><option>Completed</option></select>
           </div>
-          <button class="btn btn-primary" style="margin-top:4px" onclick="window.location.href='13-add-maintenance.html'">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            Save Record
-          </button>
+          <button class="btn btn-primary" style="margin-top:4px" onclick="saveMaintenanceRecord()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Save Record</button>
         </div>
 
         <!-- Status Transitions -->
@@ -117,62 +115,112 @@
 
       <!-- Right: Service Log -->
       <div class="card">
-        <div class="card-header">
+        <div class="card-header" style="position:relative">
           <div class="card-title">Service Log</div>
           <div style="margin-left:auto;display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="window.location.href='15-action-success.html'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Filter</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.location.href='15-action-success.html'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+            <button class="btn btn-ghost btn-sm" onclick="toggleMaintFilter()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M7 12h10M10 18h4"/></svg>Filter</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportMaintCSV()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export</button>
+            <div id="maint-filter-panel" style="display:none;position:absolute;right:20px;top:52px;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:50;min-width:200px">
+              <div style="margin-bottom:8px"><label class="form-label" style="font-size:10px">Filter by Status</label>
+              <select id="maint-filter-status" onchange="renderMaintTable()" class="form-select" style="height:32px"><option value="">All</option><option>In Shop</option><option>Completed</option></select></div>
+              <div><label class="form-label" style="font-size:10px">Filter by Vehicle</label>
+              <input id="maint-filter-vehicle" type="text" class="form-input" style="height:32px" placeholder="e.g. Van-05" oninput="renderMaintTable()"></div>
+            </div>
           </div>
         </div>
         <table class="service-log-table">
           <thead><tr>
             <th>Vehicle</th><th>Service</th><th>Cost</th><th>Date</th><th>Status</th>
           </tr></thead>
-          <tbody>
-            <tr>
-              <td style="font-weight:600;color:#0f172a">Van-05</td>
-              <td style="color:#475569">Oil Change</td>
-              <td><span class="cost-cell">₹3,500</span></td>
-              <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">01 Jul 2026</td>
-              <td><span class="pill pill-inshop">In Shop</span></td>
-            </tr>
-            <tr>
-              <td style="font-weight:600;color:#0f172a">Truck-11</td>
-              <td style="color:#475569">Engine Repair</td>
-              <td><span class="cost-cell">₹15,000</span></td>
-              <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">28 Jun 2026</td>
-              <td><span class="pill pill-completed">Completed</span></td>
-            </tr>
-            <tr>
-              <td style="font-weight:600;color:#0f172a">Mini-05</td>
-              <td style="color:#475569">Tyre Replace</td>
-              <td><span class="cost-cell">₹9,000</span></td>
-              <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">25 Jun 2026</td>
-              <td><span class="pill pill-inshop">In Shop</span></td>
-            </tr>
-            <tr>
-              <td style="font-weight:600;color:#0f172a">Van-03</td>
-              <td style="color:#475569">Brake Inspection</td>
-              <td><span class="cost-cell">₹2,800</span></td>
-              <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">20 Jun 2026</td>
-              <td><span class="pill pill-completed">Completed</span></td>
-            </tr>
-            <tr>
-              <td style="font-weight:600;color:#0f172a">Truck-01</td>
-              <td style="color:#475569">Full Service</td>
-              <td><span class="cost-cell">₹22,000</span></td>
-              <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">15 Jun 2026</td>
-              <td><span class="pill pill-completed">Completed</span></td>
-            </tr>
-          </tbody>
+<tbody id="maint-table-body"></tbody>
         </table>
         <div style="padding:12px 20px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:11px;color:#94a3b8;font-weight:500">Showing 5 of 24 records</span>
-          <div style="font-size:12px;font-weight:700;color:#0f172a">Total: <span style="font-family:'JetBrains Mono',monospace;color:#dc2626">₹52,300</span></div>
+          <span id="maint-count-label" style="font-size:11px;color:#94a3b8;font-weight:500">Showing 5 records</span>
+          <div style="font-size:12px;font-weight:700;color:#0f172a">Total: <span id="maint-total" style="font-family:'JetBrains Mono',monospace;color:#dc2626">₹0</span></div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebarUser();
+  populateVehicleSelect();
+  renderMaintTable();
+});
+
+function renderSidebarUser() {
+  const s = TO.getSession();
+  document.getElementById('sidebar-user').innerHTML = `
+    <div class="avatar" style="background:#0f766e">${s.initials||'FM'}</div>
+    <div class="avatar-info"><div class="avatar-name">${s.name||'Fleet Mgr.'}</div><div class="avatar-role">${s.role||'Fleet Manager'}</div></div>`;
+}
+
+function populateVehicleSelect() {
+  const sel = document.querySelector('select.form-select');
+  const vehicles = TO.getVehicles();
+  sel.innerHTML = vehicles.map(v => `<option>${v.name}</option>`).join('');
+}
+
+function renderMaintTable() {
+  let records = TO.getMaintenance();
+  const statFilter = document.getElementById('maint-filter-status')?.value || '';
+  const vehFilter  = (document.getElementById('maint-filter-vehicle')?.value || '').toLowerCase();
+  if (statFilter) records = records.filter(r => r.status === statFilter);
+  if (vehFilter)  records = records.filter(r => r.vehicle.toLowerCase().includes(vehFilter));
+  const tbody = document.getElementById('maint-table-body');
+  tbody.innerHTML = records.map(r => `
+    <tr>
+      <td style="font-weight:600;color:#0f172a">${r.vehicle}</td>
+      <td style="color:#475569">${r.service}</td>
+      <td><span class="cost-cell">₹${Number(r.cost).toLocaleString('en-IN')}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#94a3b8">${new Date(r.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</td>
+      <td><span class="pill ${r.status==='In Shop'?'pill-inshop':'pill-completed'}" style="cursor:pointer" onclick="toggleMaintStatus('${r.id}')" title="Click to toggle status">${r.status}</span></td>
+    </tr>`).join('');
+  const total = records.reduce((s,r) => s + Number(r.cost), 0);
+  document.getElementById('maint-total').textContent = '₹' + total.toLocaleString('en-IN');
+  document.getElementById('maint-count-label').textContent = `Showing ${records.length} records`;
+  // Update in-shop count
+  const inShop = TO.getMaintenance().filter(r => r.status === 'In Shop').length;
+  document.getElementById('in-shop-count').textContent = inShop;
+}
+
+function toggleMaintStatus(id) {
+  const records = TO.getMaintenance();
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  r.status = r.status === 'In Shop' ? 'Completed' : 'In Shop';
+  if (r.status === 'Completed') TO.updateVehicleStatus(r.vehicle, 'Available');
+  else TO.updateVehicleStatus(r.vehicle, 'In Shop');
+  localStorage.setItem('to_maintenance', JSON.stringify(records));
+  renderMaintTable();
+  showToast(`Record updated to ${r.status}`, 'success');
+}
+
+function toggleMaintFilter() {
+  const panel = document.getElementById('maint-filter-panel');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveMaintenanceRecord() {
+  const vehicle  = document.querySelector('#main-content select.form-select, select.form-select').value || document.querySelector('select.form-select').value;
+  const service  = document.querySelectorAll('select.form-select')[1]?.value;
+  const cost     = document.querySelector('input[type="number"]')?.value;
+  const date     = document.querySelector('input[type="date"]')?.value;
+  const status   = document.querySelectorAll('select.form-select')[2]?.value;
+  if (!vehicle || !cost) { showToast('Please fill in vehicle and cost', 'error'); return; }
+  const record = { id: TO.genId('MNT'), vehicle, service: service||'Service', cost: parseInt(cost)||0, date: date||new Date().toISOString().split('T')[0], status: status||'In Shop' };
+  TO.addMaintenance(record);
+  if (record.status === 'In Shop') TO.updateVehicleStatus(vehicle, 'In Shop');
+  renderMaintTable();
+  showToast('Maintenance record saved', 'success');
+}
+
+function exportMaintCSV() {
+  const records = TO.getMaintenance();
+  exportCSV(['Vehicle','Service','Cost (₹)','Date','Status'], records.map(r=>[r.vehicle,r.service,r.cost,r.date,r.status]), 'maintenance-log.csv');
+}
+</script>
 </body>
 </html>
